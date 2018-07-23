@@ -1,0 +1,19 @@
+# docker-compose for local test of desired deploy, it's handy.
+version: '2'
+services:
+  postgres:
+    image: postgres:alpine
+    volumes:
+      - ./var/postgres_data:/var/lib/postgresql/data
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: prod-docker-compose.env
+    volumes:
+      - ./src:/app/src
+    ports:
+      - "127.0.0.1:8888:80"
+    restart: always
+    links:
+      - postgres

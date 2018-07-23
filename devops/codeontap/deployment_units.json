@@ -1,0 +1,4 @@
+{
+    "Units" : ["www", "www-beat", "www-task", "www-worker"],
+    "Formats" : ["docker"]
+}

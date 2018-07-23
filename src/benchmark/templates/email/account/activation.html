@@ -1,0 +1,8 @@
+{% extends "email/base.html" %}
+
+{% block content %}
+  <h1>You have been invited</h1>
+  <p>
+    Please follow <a href="{{ site.domain }}{% url 'account-activation' activation_key %}" title="Activation link">activation link</a> to activate your account and set your password!
+  </p>
+{% endblock %}

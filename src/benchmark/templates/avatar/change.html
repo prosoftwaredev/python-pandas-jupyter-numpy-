@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load i18n avatar_tags %}
+
+{% block title %}{% trans "Change your avatar" %}{% endblock %}
+
+{% block main-content %}
+
+<div class="form-group avatar-list-form">
+    {% if not avatars %}
+        <label>You haven't uploaded an avatar yet. Please upload one now.</label>
+    {% else %}
+        <form method="POST" action="{% url 'avatar_change' %}">{% csrf_token %}
+            <div class="list-avatars">
+                <ul>
+                    {{ primary_avatar_form.as_ul }}
+                </ul>
+            </div>
+            <p>
+                <button type="submit">Save selected avatar</button>
+            </p>
+        </form>
+    {% endif %}
+    {% if avatars %}
+        <a href="{% url 'avatar_delete' %}">Go delete your avatars</a>
+    {% endif %}
+</div>
+<div class="form-group avatar-change-form">
+    <form enctype="multipart/form-data" method="POST" action="{% url 'avatar_add' %}">
+        {{ upload_avatar_form.as_p }}
+        <p>{% csrf_token %}
+            <button type="submit" class="ui yellow button">
+            <i class="add icon"></i>
+            {% trans "Upload New Image" %}
+            </button>
+        </p>
+    </form>
+</div>
+{% endblock main-content %}

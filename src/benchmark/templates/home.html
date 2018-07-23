@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+
+
+{% block sidebar %}
+<ul class="sidebar-menu">
+    <li><a href="#" class="active">Resources</a></li>
+    <li><a href="#">Frequently Asked Questions</a></li>
+    <li><a href="#">Services Catalogue</a></li>
+</ul>
+{% endblock sidebar %}
+
+{% block main-content %}
+    {% if request.user.is_authenticated %}
+        {% trans 'Hello' %} {{ request.user.username }}
+        <a href="{% url 'account-logout' %}">{% trans 'Logout' %}</a> or
+        <a href="{% url 'account-profile' %}">{% trans 'Change password' %}</a>
+        {% if request.user.account.is_finance_admin %}
+            <br /><br />
+            <p>
+                <a href="{% url 'report-upload-list' %}" title="View uploads" class="btn btn-primary">View uploads</a> or
+                <a href="{% url 'report-upload-add' %}" title="Add upload" class="btn btn-primary">Add new upload</a> or
+                <a href="{% url 'report-export-dataset' %}" title="Export agency data" class="btn btn-primary">Export agency</a>
+            </p>
+        {% else %}
+            <br /><br />
+            <p>
+                Hello {{ request.user.username }}, here’s a github <a href="https://github.com/gs-fin/benchmarking-portal/issues" title="Things coming soon">link</a> of things coming soon.
+            </p>
+        {% endif %}
+    {% else %}
+        <a href="{% url 'account-login' %}">{% trans 'Login' %}</a>
+    {% endif %}
+{% endblock main-content %}

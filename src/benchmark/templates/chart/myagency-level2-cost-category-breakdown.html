@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% load utils %}
+{% load crispy_forms_tags %}
+{% load list_index %}
+{% load humanize %}
+
+{% block sidebar %}
+<div class="sidebar-inner">
+    <div>
+    {% for name, value in initial_data.items %}
+        {% if value %}
+            {% if name == 'asl' %}
+                <label for="filter_{{ name }}">
+                    {{ 'Output By'|format_filter_param_name }}
+                </label>
+                <p id="filter_{{ name }}">
+                    {% if value == 'True' %}
+                        {{ 'ASL'|format_filter_param_value }}
+                    {% else %}
+                        {{ 'Dollars'|format_filter_param_value }}
+                    {% endif %}
+                </p>
+            {% else %}
+                <label for="filter_{{ name }}">
+                    {{ name|format_filter_param_name }}
+                </label>
+                <p id="filter_{{ name }}">
+                    {% if 'All' in value %}
+                        {% if name == 'service_level2' %}
+                            {% with service_level1=initial_data.items|get_item:'service_level1' %}
+                                {{ default_list_values.service_level2|get_item:service_level1|format_filter_param_value }}
+                            {% endwith %}
+                        {% elif name == 'agency' %}
+                                {{ default_list_values.agency|format_filter_param_value }}
+                        {% elif name == 'agency_size' %}
+                            {{ default_list_values.agency_size|format_filter_param_value }}
+                        {% endif %}
+                    {% else %}
+                            {{ value|format_filter_param_value }}
+                    {% endif %}
+                </p>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    </div>
+
+    <div>
+        <a href="{% if chart_type == 'wog' %}{% url 'chart-whole-government-filters' level %}{% else %}{% url 'chart-my-agency-filters' level %}{% endif %}?{{ request.GET.urlencode }}" class="btn btn-primary" title="Change filters">Change Filters</a>
+    </div>
+
+    <div><label></label></div>
+
+    {% if request.user.is_superuser %}
+        <div>
+            <a class="btn btn-primary" id="toggle_debug" title="Show debug">Show debug</a>
+        </div>
+
+        <div><label></label></div>
+
+        <div>
+            <pre id="debug_filter_params" class="hidden"></pre>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock sidebar %}
+
+{% block title %}
+    {{ form.form_title }}
+{% endblock %}
+
+{% block main-content %}
+    {{ results.image.legend|safe }}
+    <div class="charts-content">
+        {% for error in results.errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
+        {% if results.table_json %}
+        <div class="subplot-chart">
+            <canvas id="barChart" width="1200" height="600"></canvas>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="table-content">
+        {% if results.table_json %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        {% for column in results.table_json.columns %}
+                            <th>
+                                {{ column }}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in results.table_json.data %}
+                    <tr>
+                        <td>{{ results.table_json.index|list_index:forloop.counter0 }}</td>
+                        {% for data in row %}
+                            <td>$ {{ data }}</th>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+
+    {% if results.table_json %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.bundle.min.js"></script>
+    <script>
+        var ctx = 'barChart';
+        var color = Chart.helpers.color;
+
+        // Hash any string into an integer value
+        // Then we'll use the int and convert to hex.
+        function hashCode(str) {
+            var hash = 0;
+            for (var i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+
+            return hash;
+        }
+
+        console.log(intToARGB(hashCode('Supplier costs')))
+        console.log(intToARGB(hashCode('Consultants')))
+
+        // Convert an int to hexadecimal with a max length
+        // of six characters.
+        function intToARGB(i) {
+            var hex = ((i>>24)&0xFF).toString(16) +
+                    ((i>>16)&0xFF).toString(16) +
+                    ((i>>8)&0xFF).toString(16) +
+                    (i&0xFF).toString(16);
+            // Sometimes the string returned will be too short so we
+            // add zeros to pad it out, which later get removed if
+            // the length is greater than six.
+            hex += '000000';
+
+            return hex.substring(0, 6);
+        }
+
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [{% for column in results.table_json.columns %}"{{ column|safe }}",{% endfor %}],
+                datasets: [
+                    {% for index in results.table_json.index %}
+                        {% if not forloop.last %}
+                        {
+                            label: '{{ index }}',
+                            borderWidth: 1,
+                            data: [
+                                {% with dataset=results.table_json.data|get_by_index:forloop.counter0 %}
+                                    {% for column in results.table_json.columns %}
+                                        {
+                                            x: '{{ column|safe }}',
+                                            y: '{{ dataset|get_by_index:forloop.counter0 }}',
+                                        },
+                                    {% endfor %}
+                                {% endwith %}
+                            ],
+                            backgroundColor: color('#' + intToARGB(hashCode('{{ index }}'))).alpha(0.5).rgbString(),
+                            borderColor: color('#' + intToARGB(hashCode('{{ index }}'))).rgbString(),
+                        },
+                        {% endif %}
+                    {% endfor %}
+                ]
+            },
+            options: {
+
+                legendCallback: function(chart) {
+                    var text = [];
+                    text.push('<ul class="' + chart.id + '-legend">');
+                    for (var i = 0; i < chart.data.datasets[0].data.length; i++) {
+                      text.push('<li><span style="background-color:' +
+                      chart.data.datasets[0].backgroundColor[i] + '">');
+                        if (chart.data.labels[i]) {
+                        text.push(chart.data.labels[i]);
+                      }
+                      text.push('</span></li>');
+                    }
+                    text.push('</ul>');
+                    return text.join("");
+                },
+
+                tooltips: {
+                    mode: 'index',
+                    xPadding: 20,
+                    yPadding: 20,
+                },
+                scales: {
+                    xAxes: [{
+                        stacked: true,
+                    }],
+                    yAxes: [{
+                        stacked: true,
+                        ticks: {
+                            autoSkip: false,
+                            callback: function(value, index, values) {
+                                return "$" +value.toLocaleString(undefined, { minimumFractionDigits: 2});
+                            }
+                        }
+                    }]
+                },
+                hover: {
+                    onHover: function(e, el) {
+                        $('#barChart').css('cursor', el.length ? 'pointer' : 'default');
+                    }
+                }
+            }
+        });
+
+    </script>
+    {% endif %}
+{% endblock main-content %}
+
+{% block extra_js %}
+<script>
+    jQuery(document).ready(function ($) {
+        $('#toggle_debug').on('click', function() {
+            $('#debug_filter_params').toggleClass('hidden');
+        });
+
+        function show_debug_info() {
+            var debug_panel_el = $('#debug_filter_params');
+            var debug_data = {{ filter_params|jsonify|safe }};
+
+            var debug_output = syntaxHighlight(JSON.stringify(debug_data, undefined, 2));
+
+            debug_panel_el.append(debug_output);
+        }
+
+        show_debug_info();
+    });
+</script>
+{% endblock %}

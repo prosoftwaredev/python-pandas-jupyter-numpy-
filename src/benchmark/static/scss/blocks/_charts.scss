@@ -1,0 +1,37 @@
+.charts-content{
+  overflow: auto;
+  padding: 0 0 10px 0;
+
+  .dataframe{
+    display: inline-block;
+    vertical-align: top;
+  }
+
+  > div{
+    display: inline-block;
+    vertical-align: top;
+  }
+
+  .data-table{
+    thead{
+      th{
+        padding: 5px;
+        background: $table-bg-accent;
+      }
+    }
+
+    tbody{
+      tr{
+        th:first-child{
+          white-space:nowrap;
+        }
+      }
+
+
+      td{
+        padding: 5px;
+      }
+    }
+  }
+
+}

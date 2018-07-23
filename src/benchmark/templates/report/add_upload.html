@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add upload{% endblock %}
+
+{% block body_class %} class="fullwidth-layout"{% endblock %}
+
+{% block main-content %}
+{% if created %}
+    <h3>New report uploaded successfully!</h3>
+    <p>
+        <a class="btn btn-primary" href="{% url 'report-upload-list' %}">View uploads</a>
+    </p>
+{% else %}
+  <div class="form-wrapper">
+    <form action="." role="form" method="post" enctype="multipart/form-data" >
+        {% csrf_token %}
+        <div>
+            {% crispy form %}
+             <div class="form-group">
+                <div>
+                    <button type="submit" class="btn btn-success">Save</button>
+                </div>
+            </div>
+        </div>
+    </form>
+  </div>
+{% endif %}
+{% endblock main-content %}

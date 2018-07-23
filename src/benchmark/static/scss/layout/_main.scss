@@ -1,0 +1,149 @@
+*{
+  margin: 0;
+  padding: 0;
+}
+
+/* IE10+ specific styles */
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+  html, body{
+    height: 100%;
+    min-height: 100%;
+  }
+}
+
+
+body {
+  background: #fff;
+  font-size: 12px;
+}
+
+.wrapper {
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.site-wrapper {
+  display: flex;
+  height: 100%;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.main-content-wrapper{
+   flex: 1;
+   display:flex;
+}
+
+#sidebar{
+  flex:0 1 260px;
+  background: $secondary-color;
+
+  .fullwidth-layout & {
+    display: none;
+  }
+
+}
+
+#main{
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: #fff;
+  overflow: auto;
+  padding: 0 0 15px 0;
+
+  .fullwidth-layout & {
+    margin: 0 auto;
+    max-width: 1200px;
+  }
+}
+
+#footer{
+  min-height: 73px;
+}
+
+#main-content{
+  padding: 0 15px;
+  overflow: auto;
+}
+
+.page-title{
+  text-align: center;
+  padding: 10px 0 20px 0;
+
+  h1{
+    font-size: 26px;
+    font-weight: 700;
+  }
+}
+
+.agency-count th, td {
+    padding: 10px;
+}
+
+.chart {
+    padding: 20px 0 20px 0;
+    width: 100%;
+}
+
+.dataframe {
+    &.chart img {
+        width: auto;
+    }
+}
+
+.table-content {
+  padding: 20px;
+}
+
+.data-table {
+    display: block;
+    overflow: auto;
+    float: left;
+    border: 1px solid #696969;
+    th, td {
+      white-space: nowrap;
+      border: solid 1px #eeeeee;
+      text-align: center; 
+      padding: 5px;
+      width: 80px;
+    }
+}
+
+.subplot-chart {
+    display:inline-block;
+}
+
+@media screen and (max-width: $screen-sm-min){
+	#sidebar{
+    flex: 0;
+    order:2;
+  }
+	.main-content-wrapper {
+    flex-direction:column;
+  }
+}
+
+/* Avatars */
+.avatar-list-form {
+  float: left;
+}
+.avatar-change-form {
+  float: left;
+}
+.list-avatars {
+  li {
+    list-style: none;
+    float: left;
+  }
+  img {
+    background-repeat: no-repeat;
+    background-position: 50%;
+    border-radius: 50%;
+    width: 80px;
+  }
+  label {
+    font-weight: bold;
+    font-size: medium;
+  }
+}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}Export agency data{% endblock %}
+{% block body_class %} class="fullwidth-layout"{% endblock %}
+
+{% block main-content %}
+{% if no_data %}
+    <div class="alert alert-danger">
+      Selected params do not match any data.
+    </div>
+{% endif %}
+
+<form action="." role="form" method="post" enctype="multipart/form-data" >
+    {% csrf_token %}
+    <div>
+        {% crispy form %}
+        <div class="form-group">
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-success">Export to CSV</button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock main-content %}

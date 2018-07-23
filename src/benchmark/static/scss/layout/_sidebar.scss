@@ -1,0 +1,32 @@
+#sidebar{
+  .sidebar-menu{
+    margin: 20px 0 0 0;
+    padding: 0;
+    list-style: none;
+
+    li{
+      margin: 0 0 4px 0;
+
+      a{
+        color: $primary-color;
+        font-size: 16px;
+        display: block;
+        padding: 7px 0 7px 25px;
+
+        &:hover{
+          text-decoration: underline;
+        }
+
+        &.active{
+          font-weight: 700;
+          background: #caebec;
+          text-decoration: none;
+        }
+      }
+    }
+  }
+
+  .sidebar-inner{
+    padding: 15px 15px 15px 20px;
+  }
+}

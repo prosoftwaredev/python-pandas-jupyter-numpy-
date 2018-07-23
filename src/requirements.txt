@@ -1,0 +1,30 @@
+# core
+Django>=1.11,<1.12
+psycopg2==2.7.1
+django-environ==0.4.3
+boto3==1.4.4
+#django-ses==0.8.2
+Celery==4.1.0
+redis==2.10.5
+django-memoize==2.1.0
+
+# 3rd party
+django-crispy-forms
+django-storages
+django-redis==4.8.0
+django-avatar
+#django-queued-storage
+git+https://github.com/gs-fin/django-queued-storage.git
+csvvalidator
+chardet
+
+# deployment
+gunicorn==19.7.1
+
+# celery
+#django-celery
+django_celery_email==2.0.0
+
+# Sentry errors collection
+# no version freeze yet - they broke it sometimes, by rarely
+raven

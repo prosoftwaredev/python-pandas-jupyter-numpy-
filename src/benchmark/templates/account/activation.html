@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}Activate your account{% endblock %}
+
+{% block main-content %}
+    <form action="" method="post">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" name="save" value="1">{% trans 'Save password' %}</button>
+    </form>
+{% endblock main-content %}

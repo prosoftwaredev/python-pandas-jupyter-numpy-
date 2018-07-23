@@ -1,0 +1,98 @@
+#header {
+
+  .header-container{
+    background-color: $layout-bg;
+    background-image: url("../images/header-icon.svg");
+    background-position: right 244px bottom;
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+
+  .header-title{
+    margin: 0 0 28px 0;
+    @include clearfix;
+  }
+
+  .logo{
+    margin: 16px 0 0 64px;
+    float: left;
+  }
+
+  .user-profile{
+    float: right;
+    margin: 27px 64px 0 ;
+    padding: 0 0 0 20px;
+    width: 180px;
+
+    .user-avatar{
+      float: left;
+      margin-right: 10px;
+    }
+
+    .user-name{
+      color: #fff;
+      font-size: 17px;
+    }
+
+    .user-id{
+      font-size: 12px;
+      color: #a0a0a0;
+    }
+  }
+
+  .main-nav{
+
+    ul{
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      @include clearfix;
+    }
+
+    li{
+      float: left;
+    }
+
+    a{
+      display: block;
+      color: #fff;
+      font-weight: 700;
+
+      &:focus, &:active{
+        text-decoration: none;
+      }
+
+      &:hover, &.active {
+        text-decoration: none;
+        color: $secondary-color;
+      }
+    }
+
+
+    .menu-level-1{
+      margin: 0 0 0 40px;
+
+      a{
+        padding: 8px 24px;
+        font-size: 16px;
+
+        &:hover, &.active{
+          background: $menu-active-bg;
+          border-radius: 3px 3px 0 0;
+        }
+      }
+    }
+
+    .menu-level-2{
+      background: $menu-active-bg;
+      width: 100%;
+      padding: 0 0 0 43px;
+
+      a{
+        padding:  11px 21px 13px 21px;
+        font-size: 15px;
+      }
+
+    }
+  }
+}

@@ -1,0 +1,66 @@
+Service Name,Cost Category,Amount
+Accounts Payable,Employee Costs,23940133
+Accounts Receivable,Employee Costs,12104939
+Asset Management,Employee Costs,2271763
+Budgeting,Employee Costs,39984021
+Contract Management & Procurement,Employee Costs,33815784
+Credit Card Management,Employee Costs,5276493
+Financial Policy & Advice,Employee Costs,16308834
+Financial Reporting,Employee Costs,35971554
+Ledger Management,Employee Costs,12913612
+Other Financial Services,Employee Costs,2243456
+Taxation,Employee Costs,6393499
+Travel,Employee Costs,10233723
+Treasury,Employee Costs,7163134
+Accounts Payable,Supplier Costs,7250384
+Accounts Receivable,Supplier Costs,3939171
+Asset Management,Supplier Costs,1425375
+Budgeting,Supplier Costs,5758652
+Contract Management & Procurement,Supplier Costs,6767497
+Credit Card Management,Supplier Costs,1159005
+Financial Policy & Advice,Supplier Costs,2276730
+Financial Reporting,Supplier Costs,8622329
+Ledger Management,Supplier Costs,2689883
+Other Financial Services,Supplier Costs,517369
+Taxation,Supplier Costs,1623774
+Travel,Supplier Costs,2922231
+Treasury,Supplier Costs,1156290
+Accounts Payable,Contractor Costs,3310668
+Accounts Receivable,Contractor Costs,1344994
+Asset Management,Contractor Costs,367285
+Budgeting,Contractor Costs,2273966
+Contract Management & Procurement,Contractor Costs,2122017
+Credit Card Management,Contractor Costs,203607
+Financial Policy & Advice,Contractor Costs,780882
+Financial Reporting,Contractor Costs,2650289
+Ledger Management,Contractor Costs,895562
+Other Financial Services,Contractor Costs,143228
+Taxation,Contractor Costs,330546
+Travel,Contractor Costs,435843
+Treasury,Contractor Costs,543803
+Accounts Payable,Consultants,308040
+Accounts Receivable,Consultants,156929
+Asset Management,Consultants,248687
+Budgeting,Consultants,890317
+Contract Management & Procurement,Consultants,609442
+Credit Card Management,Consultants,12931
+Financial Policy & Advice,Consultants,451039
+Financial Reporting,Consultants,767970
+Ledger Management,Consultants,155868
+Other Financial Services,Consultants,117967
+Taxation,Consultants,59038
+Travel,Consultants,113622
+Treasury,Consultants,112190
+Accounts Payable,Overheads,47343
+Accounts Receivable,Overheads,36112
+Asset Management,Overheads,13846
+Budgeting,Overheads,46759
+Contract Management & Procurement,Overheads,20850
+Credit Card Management,Overheads,9442
+Financial Policy & Advice,Overheads,8488
+Financial Reporting,Overheads,56216
+Ledger Management,Overheads,28736
+Other Financial Services,Overheads,28287
+Taxation,Overheads,4086
+Travel,Overheads,35063
+Treasury,Overheads,14132

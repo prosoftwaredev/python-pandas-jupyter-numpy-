@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% load utils %}
+{% load crispy_forms_tags %}
+{% load list_index %}
+{% load humanize %}
+
+{% block sidebar %}
+<div class="sidebar-inner">
+    <div>
+    {% for name, value in initial_data.items %}
+        {% if value %}
+            {% if name == 'asl' %}
+                <label for="filter_{{ name }}">
+                    {{ 'Output By'|format_filter_param_name }}
+                </label>
+                <p id="filter_{{ name }}">
+                    {% if value == 'True' %}
+                        {{ 'ASL'|format_filter_param_value }}
+                    {% else %}
+                        {{ 'Dollars'|format_filter_param_value }}
+                    {% endif %}
+                </p>
+            {% else %}
+                <label for="filter_{{ name }}">
+                    {{ name|format_filter_param_name }}
+                </label>
+                <p id="filter_{{ name }}">
+                    {% if 'All' in value %}
+                        {% if name == 'service_level2' %}
+                            {% with service_level2_list=results.service_2_list %}
+                                {{ service_level2_list|format_filter_param_value }}
+                            {% endwith %}
+                        {% elif name == 'agency' %}
+                            {{ default_list_values.agency|format_filter_param_value }}
+                        {% elif name == 'agency_size' %}
+                            {{ default_list_values.agency_size|format_filter_param_value }}
+                        {% endif %}
+                    {% else %}
+                            {{ value|format_filter_param_value }}
+                    {% endif %}
+                </p>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    </div>
+
+    <div>
+        <a href="{% if chart_type == 'wog' %}{% url 'chart-whole-government-filters' level %}{% else %}{% url 'chart-my-agency-filters' level %}{% endif %}?{{ request.GET.urlencode }}" class="btn btn-primary" title="Change filters">Change Filters</a>
+    </div>
+
+    <div><label></label></div>
+
+    {% if request.user.is_superuser %}
+        <div>
+            <a class="btn btn-primary" id="toggle_debug" title="Show debug">Show debug</a>
+        </div>
+
+        <div><label></label></div>
+
+        <div>
+            <pre id="debug_filter_params" class="hidden"></pre>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock sidebar %}
+
+{% block title %}
+    {{ form.form_title }}
+{% endblock %}
+
+{% block main-content %}
+    {{ results.image.legend|safe }}
+    <div class="charts-content">
+        {% for error in results.errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
+        {% if results.table_json %}
+        <div class="subplot-chart">
+            <canvas id="barChart" width="1200" height="600"></canvas>
+        </div>
+        {% endif %}
+    </div>
+    <div class="table-content">
+        {% if results.table_json %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        {% for index in results.table_json.index %}
+                            <th>
+                                {{ index }}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for column in results.table_json.columns %}
+                    <tr>
+                        <td>{{ column }}</td>
+                        {% for index in results.table_json.index %}
+                            {% with value=results.table_json.data|list_index:forloop.counter0|list_index:forloop.parentloop.counter0 %}
+                                <td>
+                                    {% if not value|check_zero and not forloop.parentloop.last %}
+                                        <a href="{% url 'chart-whole-government-level2-benchmark' %}?{{ drill_down_url }}&service_level2={{ column|urlencode }}&period={{ period_mapping|period_to_param:index }}">
+                                            {{ value|intcomma|output_format:initial_data.asl }}
+                                        </a>
+                                    {% else %}
+                                        {{ value|intcomma|output_format:initial_data.asl }}
+                                    {% endif %}
+                                </td>
+                            {% endwith %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+
+    {% if results.table_json %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.bundle.min.js"></script>
+    <script>
+        var ctx = 'barChart';
+        var color = Chart.helpers.color;
+
+        const colourMap = function(year) {
+            periods_colors = {
+                '2014-15': '#9ACBCB',
+                '2015-16': '#2F2F31',
+                '2016-17': '#B8A7D6',
+                '2017-18': '#FFF39D',
+                '2018-19': '#3296FF'
+            }
+            return periods_colors[year] || '#9ACBCB';
+        }
+
+        const periodByYear = function(year) {
+            const mapping = {{ period_mapping|safe }};
+            return mapping[year];
+        };
+
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [{% for column in results.table_json.columns %}{% if not forloop.last %}"{{ column|safe }}",{% endif %}{% endfor %}],
+                datasets: [
+                    {% for year in results.table_json.index %}
+                    {
+                    label: '{{ year }}',
+                    backgroundColor: color(colourMap('{{ year }}')).alpha(0.5).rgbString(),
+                    borderColor: colourMap('{{ year }}'),
+                    borderWidth: 1,
+                    data: [
+                    {% with dataset=results.table_json.data|get_by_index:forloop.counter0 %}
+                        {% for column in results.table_json.columns %}
+                        {% if not forloop.last %}
+                            {
+                                x: '{{ column|safe }}',
+                                y: '{{ dataset|get_by_index:forloop.counter0 }}'
+                            },
+                        {% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                    ]
+                },
+                {% endfor %}
+                ]
+            },
+            options: {
+                onClick: function(evt) {
+                    const domElem = chart.getElementAtEvent(evt);
+                    console.log(domElem)
+                    if(domElem[0]) {
+                        const elem = domElem[0]._model;
+
+                        var url = "{% url 'chart-whole-government-level2-benchmark' %}";
+                        var l1 = encodeURIComponent("{{ initial_data.service_level1}}");
+                        var agency = encodeURIComponent("{% if initial_data.agency and initial_data.agency.0 != 'All' %}{{ initial_data.agency.0 }}{% else %}{{ default_list_values.agency.0 }}{% endif %}");
+                        var asl = "{{ initial_data.asl }}";
+                        var period = encodeURIComponent(periodByYear(elem.datasetLabel));
+                        var l2 = encodeURIComponent(elem.label);
+                        var redirect_to = ['period=' + period, 'asl=' + asl, 'service_level1=' + l1, 'service_level2=' + l2, 'agency=' + agency];
+
+                        redirect_to = redirect_to.join('&');
+                        redirect_to = url + '?' + redirect_to;
+                        window.location = redirect_to;
+                    }
+                },
+                tooltips: {
+                    xPadding: 20,
+                    yPadding: 20,
+                    displayColors: false,
+                },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return {% if initial_data.asl != 'True' %}"$" +{% endif %}value.toLocaleString(undefined, { minimumFractionDigits: 2})
+                                {% if initial_data.asl == 'True' %}+ " ASL" {% endif %}
+                            }
+                        }
+                    }],
+                    xAxes: [{
+                        ticks: {
+                            autoSkip: false,
+                        }
+                    }]
+                },
+                hover: {
+                    onHover: function(e, el) {
+                        $('#barChart').css('cursor', el.length ? 'pointer' : 'default');
+                    }
+                }
+            }
+        });
+
+    </script>
+    {% endif %}
+{% endblock main-content %}
+
+{% block extra_js %}
+<script>
+    jQuery(document).ready(function ($) {
+        $('#toggle_debug').on('click', function() {
+            $('#debug_filter_params').toggleClass('hidden');
+        });
+
+        function show_debug_info() {
+            var debug_panel_el = $('#debug_filter_params');
+            var debug_data = {{ filter_params|jsonify|safe }};
+
+            var debug_output = syntaxHighlight(JSON.stringify(debug_data, undefined, 2));
+
+            debug_panel_el.append(debug_output);
+        }
+
+        show_debug_info();
+    });
+</script>
+{% endblock %}

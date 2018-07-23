@@ -1,0 +1,36 @@
+#footer {
+  background: $layout-bg;
+  text-align: center;
+  color: #fff;
+
+  .footer-menu{
+    list-style: none;
+    padding: 0;
+    margin: 21px 0 1px 0;
+
+    li{
+      display: inline;
+      border-left: 1px solid #fff;
+
+      a{
+        color: #fff;
+        font-size: 12px;
+        text-decoration: none;
+        padding: 0 3px 0 5px;
+      }
+
+      &:first-child{
+        border-left: 0;
+
+        a{
+          padding-left: 0;
+        }
+      }
+    }
+  }
+
+  .footer-copyright{
+    margin: 0;
+  }
+
+}

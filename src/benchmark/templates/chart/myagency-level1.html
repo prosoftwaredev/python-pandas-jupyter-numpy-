@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% load utils %}
+{% load crispy_forms_tags %}
+{% load list_index %}
+{% load humanize %}
+
+{% block sidebar %}
+<div class="sidebar-inner">
+    <div>
+    {% for name, value in initial_data.items %}
+        {% if value %}
+            {% if name == 'asl' %}
+                <label for="filter_{{ name }}">
+                    {{ 'Output By'|format_filter_param_name }}
+                </label>
+                <p id="filter_{{ name }}">
+                    {% if value == 'True' %}
+                        {{ 'ASL'|format_filter_param_value }}
+                    {% else %}
+                        {{ 'Dollars'|format_filter_param_value }}
+                    {% endif %}
+                </p>
+            {% else %}
+                <label for="filter_{{ name }}">
+                    {{ name|format_filter_param_name }}
+                </label>
+                <p id="filter_{{ name }}">
+                    {% if 'All' in value %}
+                        {% if name == 'service_level2' %}
+                            {% with service_level1=initial_data.items|get_item:'service_level1' %}
+                                {{ default_list_values.service_level2|get_item:service_level1|format_filter_param_value }}
+                            {% endwith %}
+                        {% elif name == 'agency' %}
+                                {{ default_list_values.agency|format_filter_param_value }}
+                        {% elif name == 'agency_size' %}
+                            {{ default_list_values.agency_size|format_filter_param_value }}
+                        {% endif %}
+                    {% else %}
+                            {{ value|format_filter_param_value }}
+                    {% endif %}
+                </p>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    </div>
+
+    <div>
+        <a href="{% if chart_type == 'wog' %}{% url 'chart-whole-government-filters' level %}{% else %}{% url 'chart-my-agency-filters' level %}{% endif %}?{{ request.GET.urlencode }}" class="btn btn-primary" title="Change filters">Change Filters</a>
+    </div>
+
+    <div><label></label></div>
+
+    {% if request.user.is_superuser %}
+        <div>
+            <a class="btn btn-primary" id="toggle_debug" title="Show debug">Show debug</a>
+        </div>
+
+        <div><label></label></div>
+
+        <div>
+            <pre id="debug_filter_params" class="hidden"></pre>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock sidebar %}
+
+{% block title %}
+    {{ form.form_title }}
+{% endblock %}
+
+{% block main-content %}
+    {{ results.image.legend|safe }}
+    <div class="charts-content">
+        {% for error in results.errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
+        {% if results.table_json %}
+        <div class="subplot-chart">
+            <canvas id="barChart" width="1200" height="800"></canvas>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if results.table_json %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.bundle.min.js"></script>
+    <script>
+        var ctx = 'barChart';
+        var color = Chart.helpers.color;
+
+        var chart = new Chart(ctx, {
+            type: 'horizontalBar',
+            data: {
+                labels: [{% for column in results.table_json.columns %}"{{ column|safe }}",{% endfor %}],
+                datasets: [
+                    {% for index in results.table_json.index %}
+                        {% if index == 'Formatted Amount' %}
+                        {
+                            label: '{{ index }}',
+                            borderWidth: 1,
+                            data: [
+                                {% with dataset=results.table_json.data|get_by_index:forloop.counter0 %}
+                                    {% for column in results.table_json.columns %}
+                                        {
+                                            y: '{{ column|safe }}',
+                                            x: '{{ dataset|get_by_index:forloop.counter0 }}',
+                                        },
+                                    {% endfor %}
+                                {% endwith %}
+                            ],
+                            {% with results.table_json.data|last as colours %}
+                            backgroundColor: [
+                                {% for colour in colours %}
+                                    color('{{ colour }}').alpha(0.5).rgbString(),
+                                {% endfor %}
+                            ],
+                            borderColor: [
+                                {% for colour in colours %}
+                                color('{{ colour }}').rgbString(),
+                                {% endfor %}
+                            ],
+                            {% endwith %}
+                        },
+                        {% endif %}
+                    {% endfor %}
+                ]
+            },
+            options: {
+                {% comment %} onClick: function(evt) {
+                    const domElem = chart.getElementAtEvent(evt);
+                    console.log(domElem)
+                    if(domElem[0]) {
+                        const elem = domElem[0]._model;
+
+                        var url = "{% url 'chart-my-agency-level2' %}";
+                        var agency = encodeURIComponent("{% if initial_data.agency and initial_data.agency.0 != 'All' %}{% if initial_data.agency|check_type %}{{ initial_data.agency.0 }}{% else %}{{ initial_data.agency }}{% endif %}{% else %}All{% endif %}");
+                        var asl = encodeURIComponent("{{ initial_data.asl }}");
+                        var period  = encodeURIComponent("{{ initial_data.period }}");
+                        var l2 = encodeURIComponent(elem.label);
+                        var redirect_to = ['period=' + period, 'asl=' + asl, 'service_level1=' + l1, 'service_level2=' + l2, 'agency=' + agency];
+
+                        redirect_to = redirect_to.join('&');
+                        redirect_to = url + '?' + redirect_to;
+                        window.location = redirect_to;
+                    }
+                }, {% endcomment %}
+                legend: {
+                    display: true,
+                    labels: {
+                        generateLabels: function(chart) {
+                            let labels = Chart.defaults.global.legend.labels.generateLabels(chart);
+                            labels[0].lineWidth = 0;
+                            labels[0].fillStyle = 'white';
+                            return labels;
+                        }
+                    }
+                },
+
+                tooltips: {
+                    xPadding: 20,
+                    yPadding: 20,
+                    displayColors: false,
+                },
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return {% if initial_data.asl != 'True' %}"$" +{% endif %}value.toLocaleString(undefined, { minimumFractionDigits: 2})
+                                {% if initial_data.asl == 'True' %}+ " ASL" {% endif %}
+                            }
+                        }
+                    }],
+                    yAxes: [{
+                        // categoryPercentage: 0.2,
+                        // barPercentage: 0.5,
+                        ticks: {
+                            autoSkip: false,
+                        }
+                    }]
+                },
+                hover: {
+                    onHover: function(e, el) {
+                        $('#barChart').css('cursor', el.length ? 'pointer' : 'default');
+                    }
+                }
+            }
+        });
+
+    </script>
+    {% endif %}
+{% endblock main-content %}
+
+{% block extra_js %}
+<script>
+    jQuery(document).ready(function ($) {
+        $('#toggle_debug').on('click', function() {
+            $('#debug_filter_params').toggleClass('hidden');
+        });
+
+        function show_debug_info() {
+            var debug_panel_el = $('#debug_filter_params');
+            var debug_data = {{ filter_params|jsonify|safe }};
+
+            var debug_output = syntaxHighlight(JSON.stringify(debug_data, undefined, 2));
+
+            debug_panel_el.append(debug_output);
+        }
+
+        show_debug_info();
+    });
+</script>
+{% endblock %}

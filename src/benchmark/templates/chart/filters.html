@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% load utils %}
+{% load crispy_forms_tags %}
+
+{% block sidebar %}
+<div class="sidebar-inner">
+    <div>
+    {% for name, value in initial_data.items %}
+        {% if value %}
+            {% if name == 'asl' %}
+                <label for="filter_{{ name }}">
+                    {{ 'Output By'|format_filter_param_name }}
+                </label>
+                <p id="filter_{{ name }}">
+                    {% if value == 'True' %}
+                        {{ 'ASL'|format_filter_param_value }}
+                    {% else %}
+                        {{ 'Dollars'|format_filter_param_value }}
+                    {% endif %}
+                </p>
+            {% else %}
+                <label for="filter_{{ name }}">
+                    {{ name|format_filter_param_name }}
+                </label>
+                <p id="filter_{{ name }}">
+                    {% if 'All' in value %}
+                        {% if name == 'agency' %}
+                            {{ default_list_values.agency|format_filter_param_value }}
+                        {% elif name == 'agency_size' %}
+                            {{ default_list_values.agency_size|format_filter_param_value }}
+                        {% elif name == 'service_level2' %}
+                            {% for s2_name, s2_value in default_list_values.service_level2.items %}
+                                {% if s2_name == initial_data.service_level1.0 or s2_name == initial_data.service_level1 %}
+                                    {{ s2_value|format_filter_param_value }}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% else %}
+                            {{ value|format_filter_param_value }}
+                    {% endif %}
+                </p>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    </div>
+
+    <p>
+        <a href="{{ chart_absolute_url }}" title="Change filters">Back to graph</a>
+    </p>
+</div>
+{% endblock sidebar %}
+
+{% block title %}
+    {{ form.form_title }}
+{% endblock %}
+
+{% block main-content %}
+    <div class="charts-content" id="filters_form">
+        <form action="{{ chart_absolute_url }}" method="get" id="id_chart_filters">
+            {% crispy form %}
+            <div class="form-actions-row">
+                <button type="submit" name="search" class="btn btn-primary">Search</button>
+                <a href="{{ chart_absolute_url }}" title="Cancel" class="btn btn-warning">Cancel</a>
+            </div>
+        </form>
+    </div>
+{% endblock main-content %}
+
+{% block extra_js %}
+<script>
+    jQuery(document).ready(function ($) {
+        var level = '{{ level }}';
+        var chart_type = '{{ chart_type }}';
+
+        var period_data = {{ period_data|safe }};
+        var initial_data = {{ initial_data|jsonify|safe }};
+        {% if not request.user.account.is_finance_admin %}
+        var user_agencies = [{% for agency in request.user.account.agency.all %}'{{ agency.code }}', {% endfor %}];
+        {% endif %}
+
+        var opposite_map = {
+            'wog': {
+                'level1': {
+                    'agency': 'agency_size',
+                    'agency_size': 'agency'
+                },
+                'level2': {
+                    'agency': 'agency_size',
+                    'agency_size': 'agency'
+                },
+                'level2-benchmark': {
+                    //'agency': 'agency_size',
+                    //'agency_size': 'agency'
+                },
+                'level2-trend': {},
+            },
+            'myagency': {
+                'level1': {},
+                'level2': {},
+                'level2-cost-category': {}
+            }
+        }
+
+        var allowed_all_map = {
+            'wog': {
+                'level1': ['agency', 'agency_size', 'service_level1'],
+                'level2': ['agency', 'agency_size', 'service_level2'],
+                'level2-benchmark': ['agency_size'],
+                'level2-trend': ['agency', 'agency_size']
+
+            },
+            'myagency': {
+                'level1': [],
+                'level2': ['agency_size', 'service_level2'],
+                'level2-cost-category': ['agency_size']
+            }
+        }
+
+        var fields_map = {{ filter_fields_map|safe }};
+
+
+        function get_periods_data(field_name, depend_field_name, field_value) {
+            var selected_periods = $('input[name="period"]:checked').map(function(){return $(this).val();}).get();
+            if (fields_map[chart_type][level]['period'] == 'dropdown') {
+                var selected_periods = [$('select[name="period"]').val()];
+            }
+
+            var data = []
+
+            var field_allowed_all = in_array_or_equal(field_name, allowed_all_map[chart_type][level])
+
+            var field_value_all = (field_value == 'All' ? true : false);
+
+            $.each(selected_periods, function(period_i, period) {
+                var current_period_data = period_data[period][field_name]
+
+                if (field_value_all) {
+                    field_value = period_data[period][depend_field_name];
+                }
+
+                if ($.isArray(field_value)) {
+
+                    var _data = []
+
+                    $.each(field_value, function(i, val) {
+                        if (val != 'All') {
+                            _data = merge_copy(_data, current_period_data[val]);
+                        }
+                    });
+                } else {
+                    _data = current_period_data[field_value];
+                }
+
+                if (_data) {
+                    if (fields_map[chart_type][level][depend_field_name] == 'dropdown' && data.length > 0 && field_name != 'unit_type') {
+                        data = lists_intersection(_data, data);
+                    } else {
+                        data = merge_copy(data, _data);
+                    }
+                }
+            });
+
+            if (field_allowed_all) {
+                data.unshift('All');
+            }
+
+            return data;
+
+        }
+
+        function process_depends_field(field_name) {
+            var field_depends_map = {
+                'service_level2': 'service_level1',
+                'unit_type': 'service_level2'
+            }
+            var depends_to_update_map = {
+                'service_level1': ['service_level2', 'unit_type'],
+                'service_level2': ['unit_type']
+            }
+
+            var depend_fields = depends_to_update_map[field_name];
+
+            $.each(depend_fields, function(i, field_name) {
+                // If depend field does not exist - skip it
+                if ($('#div_id_' + field_name + ' > div.controls').length == 0) {
+                    return
+                }
+
+                var depend_field_name = field_depends_map[field_name];
+
+                if (fields_map[chart_type][level][depend_field_name] == 'dropdown') {
+                    var field_value = $('select[name="' + depend_field_name + '"]').val();
+                } else {
+                    var field_value = $('input[name="' + depend_field_name + '"]:checked').map(function(){return $(this).val();}).get();
+                }
+
+                var field_data = get_periods_data(field_name, depend_field_name, field_value);
+
+                var field_allowed_all = in_array_or_equal(field_name, allowed_all_map[chart_type][level])
+                var controls_el = $('#div_id_' + field_name + ' > div.controls');
+                var field_type = fields_map[chart_type][level][field_name];
+
+                controls_el.empty();
+
+                var controls_input_el = controls_el;
+
+                if (field_type == 'dropdown') {
+                    controls_el.append($('<select name="' + field_name + '" class="select form-control" id="id_' + field_name + '">'));
+                    var controls_input_el = $('select[name="' + field_name + '"]');
+                } else {
+                    controls_el.addClass('pre-scrollable');
+                }
+
+                $.each(field_data, function(data_i, data_value) {
+                    if (controls_el.find('[value="'+data_value +'"]').length == 0) {
+                        var selected = (data_i == 0 ? true : false);
+                        if (typeof(initial_data[field_name]) != 'undefined') {
+                            selected = false;
+
+                            if (in_array_or_equal(data_value, initial_data[field_name])) {
+                                selected = true;
+                            }
+                        }
+
+                        if (field_type == 'dropdown') {
+                            var checked = (selected ? 'selected="selected"' : '');
+                        } else {
+                            var checked = (selected ? 'checked="checked"' : '');
+                        }
+
+                        var allowed_all = (field_allowed_all && field_type == 'checkbox' ? 'data-all-select="allowed"' : '');
+
+                        if (field_type == 'dropdown') {
+                            var option_el = $('<option value="' + data_value + '" ' + checked + '>' + data_value + '</option>');
+                        } else {
+                            var option_el = $('<div class="' + field_type + '"> <label class=""> <input name="' + field_name + '" id="id_' + field_name + '_' + data_value + '" value="' + data_value + '" type="' + field_type + '" ' + checked + ' ' + allowed_all + '>' + data_value + '</label> </div>');
+                        }
+                        controls_input_el.append(option_el);
+                    }
+                });
+
+            })
+
+        }
+
+        function process_periods(event, selected_periods) {
+            if (typeof (selected_periods) == 'undefined') {
+                // Go over each selected period and proccess fields from it
+                var selected_periods;
+                if ($('input[name="period"]').length) {
+                    selected_periods = $('input[name="period"]:checked').map(function(){return $(this).val();}).get()
+                } else {
+                    selected_periods = $('select[name="period"]').val();
+                }
+            }
+
+            var agency_errors = $('#div_id_agency > div.controls > p');
+
+            $('#div_id_agency > div.controls').empty();
+            $('#div_id_agency_size > div.controls').empty();
+            $('#div_id_service_level1 > div.controls').empty();
+            $('#div_id_service_level2 > div.controls').empty();
+            $('#div_id_unit_type > div.controls').empty();
+
+            if (agency_errors.length) {
+              // Save form validation error messages
+              $('#div_id_agency > div.controls').append(agency_errors);
+            }
+
+            if (typeof(selected_periods) == 'undefined') {
+                return false;
+            }
+
+            if (!$.isArray(selected_periods)) {
+                selected_periods = [selected_periods];
+            }
+
+            var fields = fields_map[chart_type][level];
+
+            $.each(fields, function(field_name, field_type) {
+                var field_data = []
+
+                if (field_name == 'period') {
+                    field_data = $.map(period_data, function(element,index) {return index})
+                } else if (field_name == 'service_level2') {
+                   return process_depends_field('service_level1');
+                } else if (field_name == 'unit_type') {
+                    return
+                } else if (field_name == 'asl') {
+                    return
+                } else {
+                    $.each(selected_periods, function(period_i, period) {
+                        var current_period_data = period_data[period][field_name];
+
+                        if (field_data.length == 0) {
+                            field_data = current_period_data;
+                        } else {
+                            field_data = lists_intersection(field_data, current_period_data);
+                        }
+
+                    });
+                }
+
+                if (field_name == 'agency' && typeof(user_agencies) != 'undefined') {
+                    // For finance user we should only agencies he belong to
+                    field_data = lists_intersection(field_data, user_agencies);
+                }
+
+                var field_allowed_all = in_array_or_equal(field_name, allowed_all_map[chart_type][level]);
+
+                if (field_allowed_all && selected_periods.length != 0) {
+                    field_data.unshift('All');
+                }
+                // Let's iterate over options from data and populate control element with it
+                var controls_el = $('#div_id_' + field_name + ' > div.controls');
+
+                var do_not_create_input = false;
+
+                if (field_name == 'period' && fields_map[chart_type][level]['period'] == 'dropdown') {
+                    if (!$('[name="period"]').val()) {
+                        controls_el.empty();
+                    } else {
+                        var do_not_create_input = true;
+                    }
+                }
+
+                var controls_input_el = controls_el;
+
+                if (field_type == 'dropdown') {
+                    if (!do_not_create_input) {
+                        var allowed_all = (field_allowed_all ? 'data-all-select="allowed"' : '');
+                        controls_el.append($('<select name="' + field_name + '" class="select form-control" id="id_' + field_name + '" ' + allowed_all + '>'));
+                        var controls_input_el = $('select[name="' + field_name + '"]');
+                     } else {
+                        var controls_input_el = $(controls_el).find('select[name="' + field_name + '"]');
+                     }
+                } else {
+                    controls_el.addClass('pre-scrollable');
+                }
+
+                $.each(field_data, function(data_i, data_value) {
+                    if (controls_el.find('[value="'+data_value +'"]').length == 0) {
+
+                        var selected = false;
+                        if (in_array_or_equal(data_value, initial_data[field_name])) {
+                            selected = true;
+                        }
+
+                        if (field_type == 'dropdown') {
+                            var checked = (selected ? 'selected="selected"' : '');
+                        } else {
+                            var checked = (selected ? 'checked="checked"' : '');
+                        }
+
+                        var allowed_all = (field_allowed_all && field_type == 'checkbox' ? 'data-all-select="allowed"' : '');
+                        if (field_type == 'dropdown') {
+                            var option_el = $('<option value="' + data_value + '" ' + checked + '>' + data_value + '</option>');
+                        } else {
+                            var option_el = $('<div class="' + field_type + '"> <label class=""> <input name="' + field_name + '" id="id_' + field_name + '_' + data_value + '" value="' + data_value + '" type="' + field_type + '" ' + checked + ' ' + allowed_all + '>' + data_value + '</label> </div>');
+                        }
+                        controls_input_el.append(option_el);
+                    }
+                });
+
+            });
+
+            // Toogle it first time we render
+            //$('#filters_form').removeClass('hidden');
+
+        }
+
+        function process_select_all(event) {
+            var name = $(this).attr('name');
+            var value = $(this).val();
+            var checked = $(this).is(':checked');
+
+            var filters_form_el = $('#id_chart_filters');
+            var group_inputs = $('[name="' + name + '"]');
+            var controls_el = $('#div_id_' + name + ' > div.controls');
+
+            var opposite_name = opposite_map[chart_type][level][name];
+
+            if (typeof(opposite_name) != 'undefined') {
+                filters_form_el.find('[name="' + opposite_name + '"]').removeAttr('checked');
+            }
+
+            if (value == 'All') {
+                if (checked) {
+                    group_inputs.not(this).removeAttr('checked');
+                    group_inputs.not(this).removeAttr('selected');
+                }
+            } else {
+                if (controls_el.find('[value="All"]').length > 0) {
+                    controls_el.find('[value="All"]').removeAttr('checked');
+                }
+            }
+
+            var selected_agency = $('input[name="agency"]:checked').length > 0;
+            var selected_agency_size = $('input[name="agency_size"]:checked').length > 0;
+            if (selected_agency == false && selected_agency_size == false) {
+                $('#id_agency_All').prop('checked', true);
+                $('#id_agency_size_All').prop('checked', true);
+            }
+        }
+
+        process_periods(undefined, initial_data['period']);
+
+        $(document).on('change', '[name="period"]', process_periods);
+
+        $(document).on('change', '[name="service_level1"]', function() {
+            process_depends_field('service_level1')
+        });
+
+        $(document).on('change', '[name="service_level2"]', function() {
+            process_depends_field('service_level2')
+        });
+
+        $(document).on('change', '[data-all-select="allowed"]', process_select_all);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% load utils %}
+{% load staticfiles %}
+{% load avatar_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Benchmarking</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="google-site-verification" content=""/>
+    <meta name="keywords" content=""/>
+    {% block meta_property %}{% endblock %}
+    {% block meta_description %}{% endblock %}
+
+    <!-- Styles libs -->
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+
+    <!-- Custom styles -->
+    <link rel="canonical" href=""/>
+</head>
+<body{% block body_class %}{% endblock %}>
+    <div class="site-wrapper">
+        <header id="header">
+            <div class="header-container">
+                <div class="header-title">
+                    <a class="logo" href="http://www.finance.gov.au/"><img src="{% static 'images/finance_inline_logo.png' %}" alt="Australian Government - Department of Finance"></a>
+                    {% if request.user.is_authenticated %}
+                        <div class="user-profile">
+                            <a href="{% url 'account-profile' %}">{% avatar user 50 class="user-avatar img-circle img-responsive" %}</a>
+                            <div class="user-name">{{ request.user.first_name }} {{ request.user.last_name }}</div>
+                            <div class="user-id">@{{ request.user.username }}</div>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="main-nav">
+                    <ul class="menu-level-1">
+                        <li><a href="/" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Home</a></li>
+                        {% comment %}
+                        {% if request.user.account.is_finance_admin %}
+                            <li><a href="/" {% if 'report' in request.resolver_match.url_name %}class="active"{% endif %}>Finance Admin</a></li>
+                        {% endif %}
+                        {% endcomment %}
+                        <li><a href="{% url 'chart-whole-government-level1' %}" {% if request.resolver_match.url_name|startswith:'chart-whole-government' or request.resolver_match.url_name == 'chart-whole-government-filters' %}class="active"{% endif %}>Whole of Government</a></li>
+                        <li><a href="{% url 'chart-my-agency-level1' %}" {% if request.resolver_match.url_name|startswith:'chart-my-agency' or request.resolver_match.url_name == 'chart-my-agency-filters' or request.resolver_match.url_name == 'report-export-dataset' %}class="active"{% endif %}>My Agency</a></li>
+                    </ul>
+                    {% if request.resolver_match.url_name|startswith:'chart-whole-government' or request.resolver_match.url_name == 'chart-whole-government-filters' %}
+                    <div class="menu-level-2" id="whole-government-submenu">
+                        <ul>
+                            <li><a href="{% url 'chart-whole-government-level1' %}" {% if request.resolver_match.kwargs.level == 'level1' %}class="active"{% endif %}>Level 1</a></li>
+                            <li><a href="{% url 'chart-whole-government-level2' %}" {% if request.resolver_match.kwargs.level == 'level2' %}class="active"{% endif %}>Level 2</a></li>
+                            <li><a href="{% url 'chart-whole-government-level2-benchmark' %}" {% if request.resolver_match.kwargs.level == 'level2-benchmark' %}class="active"{% endif %}>Level 2 Benchmark</a></li>
+                            <li><a href="{% url 'chart-whole-government-level2-trend' %}" {% if request.resolver_match.kwargs.level == 'level2-trend' %}class="active"{% endif %}>Level 2 Trend</a></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                    {% if request.resolver_match.url_name|startswith:'chart-my-agency' or request.resolver_match.url_name == 'chart-my-agency-filters' or request.resolver_match.url_name == 'report-export-dataset' %}
+                    <div class="menu-level-2" id="my-agency-submenu">
+                        <ul>
+                            <li><a href="{% url 'chart-my-agency-level1' %}" {% if request.resolver_match.kwargs.level == 'level1' %}class="active"{% endif %}>Level 1 Dashboard</a></li>
+                            <li><a href="{% url 'chart-my-agency-level2' %}" {% if request.resolver_match.kwargs.level == 'level2' %}class="active"{% endif %}>Level 2 Dashboard</a></li>
+                            <li><a href="{% url 'chart-my-agency-level2-cost-category' %}" {% if request.resolver_match.kwargs.level == 'level2-cost-category' %}class="active"{% endif %}>Cost Category Breakdown</a></li>
+                            <li><a href="{% url 'report-export-dataset' %}" {% if request.resolver_match.url_name == 'report-export-dataset' %}class="active"{% endif %} title="Export agency data">Export data</a></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content-wrapper">
+            <div id="sidebar">
+                {% block sidebar %}
+                {% endblock sidebar %}
+            </div>
+            <div id="main">
+                <!-- header goes here -->
+                {% block breadcrumbs %}
+                    {% comment %}
+                    <div class="breadcrumbs">
+                        <ol class="breadcrumb">
+                            <li><a href="#">Home</a></li>
+                            <li><a href="#">Whole of Government</a></li>
+                            <li class="active">Level 1</li>
+                        </ol>
+                    </div>
+                    {% endcomment %}
+                {% endblock breadcrumbs %}
+
+                <div id="main-content">
+                    {% if messages %}
+                    <div class="alert alert-success" role="alert">
+                        {% for message in messages %}
+                        {{ message }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% block controls %}{% endblock %}
+
+                    <div class="page-title">
+                        <h1>{% block title %}Home page{% endblock %}</h1>
+                    </div>
+
+                    {% block main-content %}{% endblock main-content %}
+                </div>
+
+            </div>
+        </div>
+
+        {{ user_agent }}
+        <footer id="footer">
+            <div class="container">
+                <ul class="footer-menu" role="menu">
+                    <li><a href="http://www.finance.gov.au/archive/">Finance Archive</a></li>
+                    <li><a href="http://www.finance.gov.au/sitemap/">Sitemap and Feeds</a></li>
+                    <li><a href="http://www.finance.gov.au/feedback.html" title="">Feedback</a></li>
+                    <li><a href="http://www.finance.gov.au/copyright.html">Copyright</a></li>
+                    <li><a href="http://www.finance.gov.au/privacy-statement.html">Privacy Statement</a></li>
+                    <li><a href="http://www.finance.gov.au/accessibility.html">Accessibility</a></li>
+                    <li><a href="http://www.finance.gov.au/disclaimer.html">Disclaimer</a></li>
+                </ul>
+            </div>
+            <p class="footer-copyright">&copy; Commonwealth of Australia 2008 | ABN 61970 632 495</p>
+        </footer>
+
+    </div>
+
+    <!-- footer goes here -->
+    {% block modals %}
+    {% endblock modals %}
+    <!-- JavaScript libs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/benchmark-script.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
